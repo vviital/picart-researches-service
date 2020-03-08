@@ -1,0 +1,22 @@
+version: '3'
+services:
+  researches:
+    container_name: researches
+    build: .
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017/researches
+      - PORT=3000
+      - TOKEN_SECRET=secret
+    depends_on:
+      - mongo
+    ports:
+      - 3000:3000
+  mongo:
+    image: 'mongo'
+    volumes:
+      - mongo:/data/db
+    ports:
+      - 27017:27017
+
+volumes:
+  mongo: {}

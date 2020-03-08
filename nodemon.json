@@ -1,0 +1,13 @@
+{
+  "ignore": [
+    "**/*.spec.ts",
+    ".git",
+    "node_modules"
+  ],
+  "watch": [
+    "src",
+    "typings"
+  ],
+  "exec": "yarn start:dev",
+  "ext": "ts"
+}

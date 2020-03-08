@@ -1,0 +1,25 @@
+{
+  "compileOnSave": true,
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts"
+  ],
+  "compilerOptions": {
+    "outDir": "dest",
+    "allowJs": false,
+    "allowSyntheticDefaultImports": true,
+    "declaration": true,
+    "declarationMap": true,
+    "experimentalDecorators": true,
+    "module": "CommonJS",
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "downlevelIteration": true,
+    "target": "ESNext",
+    "typeRoots": [
+      "./typings",
+      "./node_modules/@types"
+    ]
+  },
+}

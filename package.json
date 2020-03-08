@@ -1,0 +1,48 @@
+{
+  "dependencies": {
+    "@koa/cors": "2",
+    "jsonwebtoken": "^8.5.1",
+    "koa": "^2.11.0",
+    "koa-body": "^4.1.1",
+    "koa-logger": "^3.2.1",
+    "koa-router": "^7.4.0",
+    "lodash": "^4.17.15",
+    "mongoose": "^5.7.7",
+    "nodemailer": "^6.3.1",
+    "randomatic": "^3.1.1",
+    "shortid": "^2.2.15"
+  },
+  "scripts": {
+    "build": "rm -rf dest && tsc --build",
+    "start": "node dest/index.js",
+    "start:dev": "node --inspect=5858 -r ts-node/register ./src/index.ts",
+    "start:watch": "nodemon",
+    "test": "jest"
+  },
+  "engines": {
+    "node": ">=12.3.0"
+  },
+  "name": "picart-researches-service",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:vviital/picart-researches-service.git",
+  "author": "Vitali Zaneuski <vviital@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^24.0.21",
+    "@types/jsonwebtoken": "^8.3.5",
+    "@types/koa": "^2.0.51",
+    "@types/koa-logger": "^3.1.1",
+    "@types/koa-router": "^7.0.42",
+    "@types/koa__cors": "^2.2.3",
+    "@types/lodash": "^4.14.144",
+    "@types/mongoose": "^5.5.28",
+    "@types/nodemailer": "^6.2.2",
+    "@types/shortid": "^0.0.29",
+    "jest": "^24.9.0",
+    "nodemon": "^1.19.4",
+    "ts-jest": "^24.1.0",
+    "ts-node": "^8.4.1",
+    "typescript": "^3.6.4"
+  }
+}
