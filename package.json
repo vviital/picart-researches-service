@@ -8,8 +8,6 @@
     "koa-router": "^7.4.0",
     "lodash": "^4.17.15",
     "mongoose": "^5.7.7",
-    "nodemailer": "^6.3.1",
-    "randomatic": "^3.1.1",
     "shortid": "^2.2.15"
   },
   "scripts": {
@@ -37,7 +35,6 @@
     "@types/koa__cors": "^2.2.3",
     "@types/lodash": "^4.14.144",
     "@types/mongoose": "^5.5.28",
-    "@types/nodemailer": "^6.2.2",
     "@types/shortid": "^0.0.29",
     "jest": "^24.9.0",
     "nodemon": "^1.19.4",
