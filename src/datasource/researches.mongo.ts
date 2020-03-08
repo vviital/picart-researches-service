@@ -14,7 +14,7 @@ const researchDefinition = new mongoose.Schema({
   id: {
     type: String,
     unique: true,
-    default: shortID(),
+    default: shortID,
   },
   __v: {
     type: Number,

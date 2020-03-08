@@ -1,3 +1,5 @@
+import { Context } from 'koa';
+
 export type UserClaims = {
   id: string,
   email: string,
@@ -8,4 +10,8 @@ export type UserClaims = {
 export type Pagination = {
   limit: number,
   offset: number,
+}
+
+export interface PersonalizedContext extends Context {
+  user: UserClaims
 }

@@ -1,11 +1,12 @@
 import { Context } from 'koa';
 import * as Router from 'koa-router';
 import * as koaBody from 'koa-body';
-import {toString, omitBy, isNil} from 'lodash';
+import {toString, omit, omitBy, isNil} from 'lodash';
 
 import { sendResponse, sendError } from '../senders';
 import { auth } from '../middlewares';
 import Research, {Types} from '../datasource/researches.mongo';
+import {PersonalizedContext} from '../models';
 
 const defaultProjection = { password: 0, _id: 0 };
 
@@ -13,7 +14,15 @@ const router = new Router({
   prefix: '/researches',
 });
 
-router.get('/', auth, async (ctx: Context) => {
+const toPersonalizedHandler = (fn: (t: PersonalizedContext) => void) => {
+  return (ctx: Context) => {
+    const context: PersonalizedContext = ctx as PersonalizedContext;
+
+    return fn(context);
+  }
+};
+
+router.get('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const fieldsToSearch = ['name', 'description'];
   const options = {
     query: toString(ctx.query['query']),
@@ -25,7 +34,8 @@ router.get('/', auth, async (ctx: Context) => {
 
   const researches = await Research
     .find({
-      $or: fieldsToSearch.map((field) => ({[field]: {$regex: regex}}))
+      $or: fieldsToSearch.map((field) => ({[field]: {$regex: regex}})),
+      ownerID: ctx.user.id,
     }, defaultProjection)
     .skip(options.offset)
     .limit(options.limit);
@@ -36,59 +46,60 @@ router.get('/', auth, async (ctx: Context) => {
     totalCount: researches.length,
     type: 'collection',
   });
-});
+}));
 
-router.get('/supportedTypes', async (ctx: Context) => {
+router.get('/supportedTypes', toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   return sendResponse(ctx, 200, Types);
-});
+}));
 
-const extractResearchParams = (ctx: Context) => ({
-  researchType: ctx.request.body.about,
-  name: ctx.request.body.email,
-  description: ctx.request.body.login,
-  ownerID: ctx.request.body.name
-});
+const extractResearchParams = (ctx: PersonalizedContext) => ({
+  researchType: ctx.request.body.researchType,
+  name: ctx.request.body.name,
+  description: ctx.request.body.description,
+  ownerID: ctx.user.id
+})
 
 router.use(koaBody());
 
-router.post('/', auth, async (ctx: Context) => {
+router.post('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const research = new Research(extractResearchParams(ctx));
   const result = await research.save();
   sendResponse(ctx, 201, result.toJSON({ virtuals: true }));
-});
+}));
 
-router.get('/:id', auth, async (ctx: Context) => {
+router.get('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const id = ctx.params.id;
-  const research = await Research.findOne({ id }, defaultProjection);
+  const research = await Research.findOne({ id, ownerID: ctx.user.id}, defaultProjection);
 
   if (!research) {
     return sendError(ctx, 404, { message: 'Research not found' });
   }
 
   sendResponse(ctx, 200, research.toJSON({ virtuals: true }));
-});
+}));
 
-router.patch('/:id', auth, async (ctx: Context) => {
+router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const id = ctx.params.id;
-  const fields = omitBy(extractResearchParams(ctx), isNil);
+  const fields = omit(omitBy(extractResearchParams(ctx), isNil), 'ownerID');
+  const query = { id, ownerID: ctx.user.id };
 
-  await Research.updateOne({ id }, { $set: fields });
+  await Research.updateOne(query, { $set: fields });
 
-  const research = await Research.findOne({ id }, defaultProjection);
+  const research = await Research.findOne(query, defaultProjection);
 
   if (research) {
     sendResponse(ctx, 200, research.toJSON({ virtuals: true }));
   }
 
   sendResponse(ctx, 200, {});
-});
+}));
 
-router.delete('/:id', auth, async (ctx: Context) => {
+router.delete('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const id = ctx.params.id;
 
-  await Research.deleteOne({ id });
+  await Research.deleteOne({ id, ownerID: ctx.user.id });
 
   sendResponse(ctx, 204);
-});
+}));
 
 export default router;
