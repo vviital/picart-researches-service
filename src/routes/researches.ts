@@ -89,7 +89,7 @@ router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext
   const research = await Research.findOne(query, defaultProjection);
 
   if (research) {
-    sendResponse(ctx, 200, research.toJSON({ virtuals: true }));
+    return sendResponse(ctx, 200, research.toJSON({ virtuals: true }));
   }
 
   sendResponse(ctx, 200, {});
