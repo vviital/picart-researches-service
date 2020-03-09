@@ -37,6 +37,7 @@ router.get('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => 
       $or: fieldsToSearch.map((field) => ({[field]: {$regex: regex}})),
       ownerID: ctx.user.id,
     }, defaultProjection)
+    .sort({createdAt: -1})
     .skip(options.offset)
     .limit(options.limit);
   sendResponse(ctx, 200, {

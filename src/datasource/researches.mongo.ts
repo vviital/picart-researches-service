@@ -39,16 +39,18 @@ const researchDefinition = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now(),
+    default: Date.now,
   },
   updatedAt: {
     type: Date,
-    default: Date.now(),
+    default: Date.now,
   },
 });
 
 researchDefinition.virtual('type').get(() => 'research');
 researchDefinition.index({ ownerID: 1 });
+researchDefinition.index({ ownerID: 1, createdAt: -1 });
+researchDefinition.index({ ownerID: 1, updatedAt: -1 });
 
 export interface IResearch extends mongoose.Document {
   id: string
