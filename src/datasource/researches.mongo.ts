@@ -7,6 +7,12 @@ const fileDefinition = new mongoose.Schema({
   },
   type: {
     type: String
+  },
+  title: {
+    type: String
+  },
+  description: {
+    type: String
   }
 });
 
@@ -60,6 +66,8 @@ export interface IResearch extends mongoose.Document {
   ownerID: string
   files: {
     id: string
+    description: string
+    title: string
     type: string
   }[]
   createdAt: Date

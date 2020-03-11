@@ -54,10 +54,11 @@ router.get('/supportedTypes', toPersonalizedHandler(async (ctx: PersonalizedCont
 }));
 
 const extractResearchParams = (ctx: PersonalizedContext) => ({
-  researchType: ctx.request.body.researchType,
-  name: ctx.request.body.name,
   description: ctx.request.body.description,
-  ownerID: ctx.user.id
+  files: ctx.request.body.files,
+  name: ctx.request.body.name,
+  ownerID: ctx.user.id,
+  researchType: ctx.request.body.researchType,
 })
 
 router.use(koaBody());

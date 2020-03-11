@@ -13,7 +13,7 @@
   "scripts": {
     "build": "rm -rf dest && tsc --build",
     "start": "node dest/index.js",
-    "start:dev": "node --inspect=5858 -r ts-node/register ./src/index.ts",
+    "start:dev": "node -r ts-node/register ./src/index.ts",
     "start:watch": "nodemon",
     "test": "jest"
   },
