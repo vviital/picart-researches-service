@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@koa/cors": "2",
+    "@types/request-promise": "^4.1.45",
     "jsonwebtoken": "^8.5.1",
     "koa": "^2.11.0",
     "koa-body": "^4.1.1",
@@ -8,6 +9,7 @@
     "koa-router": "^7.4.0",
     "lodash": "^4.17.15",
     "mongoose": "^5.7.7",
+    "request-promise": "^4.2.5",
     "shortid": "^2.2.15"
   },
   "scripts": {
