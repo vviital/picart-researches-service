@@ -14,7 +14,7 @@ const fileDefinition = new mongoose.Schema({
   description: {
     type: String
   }
-});
+}, { _id : false });
 
 const researchDefinition = new mongoose.Schema({
   id: {
