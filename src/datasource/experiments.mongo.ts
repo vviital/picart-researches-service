@@ -1,7 +1,7 @@
 import * as mongoose from 'mongoose';
 import * as shortID from 'shortid';
 
-import {ZaidelSettings} from './zaidel.service';
+import {ZaidelSettings, Peak} from './zaidel.service';
 
 const settingsDefinition = new mongoose.Schema({
   averageWindow: {
@@ -30,7 +30,37 @@ const settingsDefinition = new mongoose.Schema({
     type: Number,
     required: true
   }
-});
+}, { _id : false });
+
+const coordinatesDefinition = new mongoose.Schema({
+  x: {
+    type: Number,
+    required: true
+  },
+  y: {
+    type: Number,
+    required: true
+  }
+}, { _id : false })
+
+const peakDefinition = new mongoose.Schema({
+  peak: {
+    type: coordinatesDefinition,
+    required: true
+  },
+  left: {
+    type: coordinatesDefinition,
+    required: true
+  },
+  right: {
+    type: coordinatesDefinition,
+    required: true
+  },
+  area: {
+    type: Number,
+    required: true
+  }
+}, { _id : false });
 
 const experimentResults = new mongoose.Schema({
   
@@ -68,6 +98,11 @@ const experimentDefinition = new mongoose.Schema({
     type: settingsDefinition,
     required: true
   },
+  peaks: {
+    type: [peakDefinition],
+    required: true,
+    default: []
+  },
   results: {
     type: experimentResults,
     required: false
@@ -95,6 +130,7 @@ export interface IExperiment extends mongoose.Document {
   ownerID: string
   researchID: string
   settings: ZaidelSettings
+  peaks: Peak[]
   type: string
   createdAt: Date
   updatedAt: Date

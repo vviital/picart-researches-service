@@ -1,7 +1,7 @@
 import { Context } from 'koa';
 import * as Router from 'koa-router';
 import * as koaBody from 'koa-body';
-import {toString, omit, omitBy, isNil, split} from 'lodash';
+import {toString, omit, omitBy, isNil, split, isEqual} from 'lodash';
 
 import { sendResponse, sendError } from '../senders';
 import { auth } from '../middlewares';
@@ -10,7 +10,7 @@ import zaidel from '../datasource/zaidel.service';
 
 import {PersonalizedContext} from '../models';
 
-const defaultProjection = { _id: 0 };
+const defaultProjection = { peaks: 0, settings: 0, _id: 0 };
 
 const router = new Router({
   prefix: '/experiments',
@@ -68,13 +68,18 @@ router.use(koaBody());
 
 router.post('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const params = extractExperimentParams(ctx);
-  const defaultSettings = await zaidel.getDefaultPeaksSettings();
-  console.log('--- default settings ---', defaultSettings);
-  params.settings = params.settings || defaultSettings;
+  params.settings = params.settings || await zaidel.getDefaultPeaksSettings();
 
-  console.log('--- params ---', params);
+  const peaksResp = await zaidel.findSpectrumPoints({
+    ownerID: params.ownerID,
+    fileID: params.fileID,
+    settings: params.settings,
+  }, ctx.req.headers['authorization'] || '');
 
-  const experiment = new Experiment(params);
+  const experiment = new Experiment({
+    ...params,
+    peaks: peaksResp.peaks || []
+  });
 
   const result = await experiment.save();
   sendResponse(ctx, 201, result.toJSON({ virtuals: true }));
@@ -82,13 +87,13 @@ router.post('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) =>
 
 router.get('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const id = ctx.params.id;
-  const research = await Experiment.findOne({ id, ownerID: ctx.user.id}, defaultProjection);
+  const experiment = await Experiment.findOne({ id, ownerID: ctx.user.id});
 
-  if (!research) {
-    return sendError(ctx, 404, { message: 'Research not found' });
+  if (!experiment) {
+    return sendError(ctx, 404, { message: 'Experiment not found' });
   }
 
-  sendResponse(ctx, 200, research.toJSON({ virtuals: true }));
+  sendResponse(ctx, 200, experiment.toJSON({ virtuals: true }));
 }));
 
 router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
@@ -96,9 +101,23 @@ router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext
   const fields = omit(omitBy(extractExperimentParams(ctx), isNil), ['ownerID', 'fileID', 'researchID']);
   const query = { id, ownerID: ctx.user.id };
 
-  await Experiment.updateOne(query, { $set: fields });
+  const oldExperiment = await Experiment.findOne(query);
+  if (!oldExperiment) {
+    return sendError(ctx, 404, { message: 'Experiment not found' });
+  }
 
-  const experiment = await Experiment.findOne(query, defaultProjection);
+  if (fields.settings && !isEqual(fields.settings, oldExperiment.settings)) {
+    const peaksResp = await zaidel.findSpectrumPoints({
+      ownerID: oldExperiment.ownerID,
+      fileID: oldExperiment.fileID,
+      settings: fields.settings,
+    }, ctx.req.headers['authorization'] || '');
+
+    fields.peaks = peaksResp.peaks || [];
+  }
+
+  await Experiment.updateOne(query, { $set: fields });
+  const experiment = await Experiment.findOne(query);
 
   if (experiment) {
     return sendResponse(ctx, 200, experiment.toJSON({ virtuals: true }));
