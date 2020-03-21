@@ -1,7 +1,7 @@
 import * as mongoose from 'mongoose';
 import * as shortID from 'shortid';
 
-import {ZaidelSettings, Peak} from './zaidel.service';
+import {ZaidelPeaksSettings, ZaidelChemicalElementsSettings, Peak} from './zaidel.service';
 
 const settingsDefinition = new mongoose.Schema({
   averageWindow: {
@@ -27,6 +27,33 @@ const settingsDefinition = new mongoose.Schema({
     default: false
   },
   threshold: {
+    type: Number,
+    required: true
+  }
+}, { _id : false });
+
+const chemicalElementsSettingsDefinition = new mongoose.Schema({
+  maxElementsPerPeak: {
+    type: Number,
+    required: true
+  },
+  maxIntensity: {
+    type: Number,
+    required: true
+  },
+  maxIonizationLevel: {
+    type: Number,
+    required: true
+  },
+  minIntensity: {
+    type: Number,
+    required: true
+  },
+  searchInMostSuitableGroup: {
+    type: Boolean,
+    required: true
+  },
+  waveLengthRange: {
     type: Number,
     required: true
   }
@@ -62,9 +89,48 @@ const peakDefinition = new mongoose.Schema({
   }
 }, { _id : false });
 
+const elementDefinition = new mongoose.Schema({
+  isSearchCriteriaMatched: {
+    type: Boolean,
+    required: true
+  },
+  similarity: {
+    type: Number,
+    required: true
+  },
+  intensity: {
+    type: Number,
+    required: true
+  },
+  ionizationStage: {
+    type: Number,
+    required: true
+  },
+  element: {
+    type: String,
+    required: true
+  },
+  waveLength: {
+    type: Number,
+    required: true
+  }
+}, { _id : false });
+
+const peakWithElementsDefinition = new mongoose.Schema({
+  elements: {
+    type: [elementDefinition],
+    required: true,
+    default: []
+  },
+  totalElementsCount: {
+    type: Number,
+    required: true
+  }
+}, { _id : false });
+
 const experimentResults = new mongoose.Schema({
   
-});
+}, { _id : false });
 
 const experimentDefinition = new mongoose.Schema({
   id: {
@@ -94,14 +160,22 @@ const experimentDefinition = new mongoose.Schema({
     type: String,
     required: true
   },
-  settings: {
+  peaksSearchSettings: {
     type: settingsDefinition,
+    required: true
+  },
+  chemicalElementsSettings: {
+    type: chemicalElementsSettingsDefinition,
     required: true
   },
   peaks: {
     type: [peakDefinition],
     required: true,
     default: []
+  },
+  matchedElementsPerPeak: {
+    type: [peakWithElementsDefinition],
+    required: true,
   },
   results: {
     type: experimentResults,
@@ -129,7 +203,8 @@ export interface IExperiment extends mongoose.Document {
   name: string
   ownerID: string
   researchID: string
-  settings: ZaidelSettings
+  peaksSearchSettings: ZaidelPeaksSettings
+  chemicalElementsSettings: ZaidelChemicalElementsSettings
   peaks: Peak[]
   type: string
   createdAt: Date
