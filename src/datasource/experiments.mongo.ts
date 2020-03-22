@@ -68,9 +68,9 @@ const coordinatesDefinition = new mongoose.Schema({
     type: Number,
     required: true
   }
-}, { _id : false })
+}, { _id : false });
 
-const peakDefinition = new mongoose.Schema({
+const sharedPeakDefinition = {
   peak: {
     type: coordinatesDefinition,
     required: true
@@ -87,12 +87,19 @@ const peakDefinition = new mongoose.Schema({
     type: Number,
     required: true
   }
-}, { _id : false });
+};
+
+const peakDefinition = new mongoose.Schema(sharedPeakDefinition);
 
 const elementDefinition = new mongoose.Schema({
   isSearchCriteriaMatched: {
     type: Boolean,
     required: true
+  },
+  selected: {
+    type: Boolean,
+    required: true,
+    default: true
   },
   similarity: {
     type: Number,
@@ -114,9 +121,10 @@ const elementDefinition = new mongoose.Schema({
     type: Number,
     required: true
   }
-}, { _id : false });
+});
 
 const peakWithElementsDefinition = new mongoose.Schema({
+  ...sharedPeakDefinition,
   elements: {
     type: [elementDefinition],
     required: true,
@@ -126,7 +134,7 @@ const peakWithElementsDefinition = new mongoose.Schema({
     type: Number,
     required: true
   }
-}, { _id : false });
+});
 
 const experimentResults = new mongoose.Schema({
   

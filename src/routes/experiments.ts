@@ -10,7 +10,13 @@ import zaidel from '../datasource/zaidel.service';
 
 import {PersonalizedContext} from '../models';
 
-const defaultProjection = { peaks: 0, peaksSearchSettings: 0, _id: 0 };
+const defaultProjection = {
+  _id: 0,
+  chemicalElementsSettings: 0,
+  matchedElementsPerPeak: 0,
+  peaks: 0,
+  peaksSearchSettings: 0,
+};
 
 const router = new Router({
   prefix: '/experiments',
@@ -56,23 +62,24 @@ router.get('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => 
 }));
 
 const extractExperimentParams = (ctx: PersonalizedContext) => ({
+  chemicalElementsSettings: ctx.request.body.chemicalElementsSettings,
   description: ctx.request.body.description,
   fileID: ctx.request.body.fileID,
+  matchedElementsPerPeak: ctx.request.body.matchedElementsPerPeak,
   name: ctx.request.body.name,
   ownerID: ctx.user.id,
-  researchID: ctx.request.body.researchID,
   peaksSearchSettings: ctx.request.body.peaksSearchSettings,
-  chemicalElementsSettings: ctx.request.body.chemicalElementsSettings,
+  researchID: ctx.request.body.researchID,
 })
 
-router.use(koaBody());
+router.use(koaBody({jsonLimit: '16mb'}));
 
 router.post('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const auth = ctx.req.headers['authorization'] || '';
 
   const params = extractExperimentParams(ctx);
-  params.peaksSearchSettings = params.peaksSearchSettings || await zaidel.getDefaultPeaksSettings();
-  params.chemicalElementsSettings = params.chemicalElementsSettings || await zaidel.getDefaultChemicalElementsSettings();
+  params.peaksSearchSettings = await zaidel.getDefaultPeaksSettings();
+  params.chemicalElementsSettings = await zaidel.getDefaultChemicalElementsSettings();
 
   const peaksResp = await zaidel.findSpectrumPoints({
     ownerID: params.ownerID,
@@ -107,7 +114,12 @@ router.get('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) 
 }));
 
 const isObjectChanged = (next?: object, current?: object): boolean => {
-  return !!next && !isEqual(next, current);
+  if (!next) {
+    return false;
+  }
+  next = JSON.parse(JSON.stringify(omitBy(next, isNil)));
+  current = JSON.parse(JSON.stringify(omitBy(current, isNil)));
+  return !isEqual(next, current);
 }
 
 router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
@@ -116,7 +128,7 @@ router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext
 
   const fields = omit(
     omitBy(extractExperimentParams(ctx), isNil),
-    ['ownerID', 'fileID', 'researchID', 'peaks', 'matchedElementsPerPeak']
+    ['ownerID', 'fileID', 'researchID', 'peaks']
   );
   const query = { id, ownerID: ctx.user.id };
 
@@ -124,6 +136,8 @@ router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext
   if (!oldExperiment) {
     return sendError(ctx, 404, { message: 'Experiment not found' });
   }
+
+  let forceUpdate = false;
 
   if (isObjectChanged(fields.peaksSearchSettings, oldExperiment.peaksSearchSettings)) {
     const peaksResp = await zaidel.findSpectrumPoints({
@@ -133,15 +147,20 @@ router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext
     }, auth);
 
     fields.peaks = peaksResp.peaks || [];
+    forceUpdate = true;
+
+    console.log('--- updating peaks ---');
   }
 
-  if (isObjectChanged(fields.chemicalElementsSettings, oldExperiment.chemicalElementsSettings)) {
+  if (forceUpdate || isObjectChanged(fields.chemicalElementsSettings, oldExperiment.chemicalElementsSettings)) {
     const matchedChemicalElementsResp = await zaidel.findMatchedChemicalElements({
       peaks: fields.peaks || oldExperiment.peaks,
       settings: fields.chemicalElementsSettings
     }, auth);
-    
+
     fields.matchedElementsPerPeak = matchedChemicalElementsResp.peaksWithElements;
+
+    console.log('--- updating matchedElementsPerPeak ---');
   }
 
   await Experiment.updateOne(query, { $set: fields });

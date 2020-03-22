@@ -1,4 +1,5 @@
 import * as request from 'request-promise';
+import * as _ from 'lodash';
 
 import config from '../config';
 
@@ -49,6 +50,7 @@ export type ZaidelFindChemicalElementsRequest = {
 
 export type Element = {
   isSearchCriteriaMatched: boolean
+  selected: boolean
   similarity: number
   intensity: number
   ionizationStage: number
