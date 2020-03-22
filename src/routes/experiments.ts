@@ -132,7 +132,7 @@ router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext
   );
   const query = { id, ownerID: ctx.user.id };
 
-  const oldExperiment = await Experiment.findOne(query);
+  const oldExperiment = await Experiment.findOne(query, {matchedElementsPerPeak: 0});
   if (!oldExperiment) {
     return sendError(ctx, 404, { message: 'Experiment not found' });
   }

@@ -92,7 +92,7 @@ const sharedPeakDefinition = {
 const peakDefinition = new mongoose.Schema(sharedPeakDefinition);
 
 const elementDefinition = new mongoose.Schema({
-  isSearchCriteriaMatched: {
+  matched: {
     type: Boolean,
     required: true
   },
@@ -109,7 +109,7 @@ const elementDefinition = new mongoose.Schema({
     type: Number,
     required: true
   },
-  ionizationStage: {
+  stage: {
     type: Number,
     required: true
   },

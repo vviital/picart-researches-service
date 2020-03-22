@@ -49,11 +49,11 @@ export type ZaidelFindChemicalElementsRequest = {
 }
 
 export type Element = {
-  isSearchCriteriaMatched: boolean
+  matched: boolean
   selected: boolean
   similarity: number
   intensity: number
-  ionizationStage: number
+  stage: number
   element: string
   waveLength: number
 }
