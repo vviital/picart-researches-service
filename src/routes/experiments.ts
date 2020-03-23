@@ -1,12 +1,23 @@
 import { Context } from 'koa';
 import * as Router from 'koa-router';
 import * as koaBody from 'koa-body';
-import {toString, omit, omitBy, isNil, split, isEqual} from 'lodash';
+import {
+  filter,
+  find,
+  get,
+  isEqual,
+  isNil,
+  omit,
+  omitBy,
+  sortBy,
+  split,
+  toString,
+} from 'lodash';
 
 import { sendResponse, sendError } from '../senders';
 import { auth } from '../middlewares';
 import Experiment from '../datasource/experiments.mongo';
-import zaidel from '../datasource/zaidel.service';
+import zaidel, { PeakWithElements, ZaidelAutoSuggestion, ElementWithPeak } from '../datasource/zaidel.service';
 
 import {PersonalizedContext} from '../models';
 
@@ -74,6 +85,49 @@ const extractExperimentParams = (ctx: PersonalizedContext) => ({
 
 router.use(koaBody({jsonLimit: '16mb'}));
 
+const calculateExperimentResult = (peaksWithElements: PeakWithElements[] = [], autoSuggestions: ZaidelAutoSuggestion[] = []): ElementWithPeak[] => {
+  const result: ElementWithPeak[] = [];
+
+  for (const peakWithElement of peaksWithElements) {
+    const selectedElements = filter(peakWithElement.elements, (element) => get(element, 'selected'));
+    if (selectedElements.length === 1) {
+      result.push({
+        peak: {
+          peak: peakWithElement.peak,
+          left: peakWithElement.left,
+          right: peakWithElement.right,
+          area: peakWithElement.area,
+        },
+        element: selectedElements[0],
+        fromSuggestions: false,
+      });
+      continue;
+    }
+
+    const matchedSuggestion = find(autoSuggestions, (suggestion) => {
+      return suggestion.peak.peak.x === peakWithElement.peak.x &&
+        suggestion.peak.peak.y === peakWithElement.peak.y
+    });
+
+    if (!matchedSuggestion) {
+      console.error(
+        'Cannot find auto suggestion for peak',
+        peakWithElement.peak,
+        JSON.stringify(autoSuggestions, null, ' ')
+      );
+      continue;
+    }
+
+    result.push({
+      peak: matchedSuggestion.peak,
+      element: matchedSuggestion.element,
+      fromSuggestions: true,
+    });
+  }
+
+  return sortBy(result, 'peak.peak.x');
+};
+
 router.post('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const auth = ctx.req.headers['authorization'] || '';
 
@@ -92,10 +146,17 @@ router.post('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) =>
     settings: params.chemicalElementsSettings
   }, auth);
 
+  const experimentResults = calculateExperimentResult(
+    matchedChemicalElementsResp.peaksWithElements,
+    matchedChemicalElementsResp.autoSuggestions
+  );
+
   const experiment = new Experiment({
     ...params,
     peaks: peaksResp.peaks || [],
-    matchedElementsPerPeak: matchedChemicalElementsResp.peaksWithElements
+    matchedElementsPerPeak: matchedChemicalElementsResp.peaksWithElements,
+    autoSuggestions: matchedChemicalElementsResp.autoSuggestions,
+    experimentResults,
   });
 
   const result = await experiment.save();
@@ -159,8 +220,20 @@ router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext
     }, auth);
 
     fields.matchedElementsPerPeak = matchedChemicalElementsResp.peaksWithElements;
+    fields.autoSuggestions = matchedChemicalElementsResp.autoSuggestions;
 
     console.log('--- updating matchedElementsPerPeak ---');
+  }
+
+  if (fields.matchedElementsPerPeak) {
+    const autoSuggestions = fields.autoSuggestions || oldExperiment.autoSuggestions;
+
+    fields.experimentResults = calculateExperimentResult(
+      fields.matchedElementsPerPeak,
+      autoSuggestions
+    );
+
+    console.log('--- updating experimentResults ---');
   }
 
   await Experiment.updateOne(query, { $set: fields });

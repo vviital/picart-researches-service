@@ -58,14 +58,24 @@ export type Element = {
   waveLength: number
 }
 
-export type PeakWithElement = Peak & {
+export type PeakWithElements = Peak & {
   elements: Element[]
   totalElementsCount: number
 }
 
+export type ZaidelAutoSuggestion = {
+  peak: Peak
+  element: Element
+}
+
+export type ElementWithPeak = ZaidelAutoSuggestion & {
+  fromSuggestions: boolean
+}
+
 export type ZaidelFindChemicalElementsResponse = {
   peaksCount: number
-  peaksWithElements: PeakWithElement[]
+  peaksWithElements: PeakWithElements[]
+  autoSuggestions: ZaidelAutoSuggestion[]
 }
 
 const requestOptions = {

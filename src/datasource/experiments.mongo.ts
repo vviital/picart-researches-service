@@ -1,7 +1,14 @@
 import * as mongoose from 'mongoose';
 import * as shortID from 'shortid';
 
-import {ZaidelPeaksSettings, ZaidelChemicalElementsSettings, Peak} from './zaidel.service';
+import {
+  ElementWithPeak,
+  Peak,
+  PeakWithElements,
+  ZaidelAutoSuggestion,
+  ZaidelChemicalElementsSettings,
+  ZaidelPeaksSettings,
+} from './zaidel.service';
 
 const settingsDefinition = new mongoose.Schema({
   averageWindow: {
@@ -99,7 +106,7 @@ const elementDefinition = new mongoose.Schema({
   selected: {
     type: Boolean,
     required: true,
-    default: true
+    default: false
   },
   similarity: {
     type: Number,
@@ -136,9 +143,27 @@ const peakWithElementsDefinition = new mongoose.Schema({
   }
 });
 
-const experimentResults = new mongoose.Schema({
-  
-}, { _id : false });
+const elementWithPeak = {
+  peak: {
+    type: sharedPeakDefinition,
+    required: true
+  },
+  element: {
+    type: elementDefinition,
+    required: true
+  },
+}
+
+const elementWithPeakDefinition = new mongoose.Schema(elementWithPeak);
+
+const experimentResultDefinition = new mongoose.Schema({
+  ...elementWithPeak,
+  fromSuggestions: {
+    type: Boolean,
+    required: true,
+    default: false,
+  }
+})
 
 const experimentDefinition = new mongoose.Schema({
   id: {
@@ -185,9 +210,15 @@ const experimentDefinition = new mongoose.Schema({
     type: [peakWithElementsDefinition],
     required: true,
   },
-  results: {
-    type: experimentResults,
-    required: false
+  autoSuggestions: {
+    type: [elementWithPeakDefinition],
+    required: true,
+    default: []
+  },
+  experimentResults: {
+    type: [experimentResultDefinition],
+    required: true,
+    default: []
   },
   createdAt: {
     type: Date,
@@ -206,14 +237,17 @@ experimentDefinition.index({ researchID: 1 });
 
 export interface IExperiment extends mongoose.Document {
   id: string
+  autoSuggestions: ZaidelAutoSuggestion[]
+  chemicalElementsSettings: ZaidelChemicalElementsSettings
   description: string
   fileID: string
+  matchedElementsPerPeak: PeakWithElements[]
   name: string
   ownerID: string
-  researchID: string
-  peaksSearchSettings: ZaidelPeaksSettings
-  chemicalElementsSettings: ZaidelChemicalElementsSettings
   peaks: Peak[]
+  peaksSearchSettings: ZaidelPeaksSettings
+  researchID: string
+  results: ElementWithPeak[]
   type: string
   createdAt: Date
   updatedAt: Date
