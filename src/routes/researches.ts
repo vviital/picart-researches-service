@@ -1,14 +1,15 @@
 import { Context } from 'koa';
 import * as Router from 'koa-router';
 import * as koaBody from 'koa-body';
-import {toString, omit, omitBy, isNil} from 'lodash';
+import * as _ from 'lodash';
 
 import { sendResponse, sendError } from '../senders';
 import { auth } from '../middlewares';
 import Research, {Types} from '../datasource/researches.mongo';
+import Experiment from '../datasource/experiments.mongo';
 import {PersonalizedContext} from '../models';
 
-const defaultProjection = { password: 0, _id: 0 };
+const defaultProjection = { _id: 0 };
 
 const router = new Router({
   prefix: '/researches',
@@ -23,28 +24,35 @@ const toPersonalizedHandler = (fn: (t: PersonalizedContext) => void) => {
 };
 
 router.get('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
-  const fieldsToSearch = ['name', 'description'];
+  const fieldsToSearch = ['name', 'description', 'researchType'];
   const options = {
-    query: toString(ctx.query['query']),
+    query: _.toString(ctx.query['query']),
     limit: +ctx.query['limit'] || 100,
-    offset: +ctx.query['offset'] || 0
+    offset: +ctx.query['offset'] || 0,
+    withExperiments: ctx.query['withExperiments'] ? true : false
   };
 
-  const regex = new RegExp(options.query.split('').map((s) => `.*${s}`).join(''), 'gmi');
+ 
+  const fullTextQuery: any = {};
+  if (options.query) {
+    const regex = new RegExp(options.query.split('').map((s) => `.*${s}`).join(''), 'gmi');
+    fullTextQuery['$or'] = fieldsToSearch.map((field) => ({[field]: {$regex: regex}}));
+  }
 
   const researches = await Research
     .find({
-      $or: fieldsToSearch.map((field) => ({[field]: {$regex: regex}})),
+      ...fullTextQuery,
       ownerID: ctx.user.id,
-    }, defaultProjection)
+    }, { _id: 0, researchType: 1, name: 1, id: 1, type: 1, description: 1 })
     .sort({createdAt: -1})
     .skip(options.offset)
     .limit(options.limit);
+
   sendResponse(ctx, 200, {
-    items: researches.map(x => x.toJSON({ virtuals: true })),
+    items: researches,
     limit: options.limit,
     offset: options.offset,
-    totalCount: researches.length,
+    totalCount: _.size(researches),
     type: 'collection',
   });
 }));
@@ -82,7 +90,7 @@ router.get('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) 
 
 router.patch('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const id = ctx.params.id;
-  const fields = omit(omitBy(extractResearchParams(ctx), isNil), 'ownerID');
+  const fields = _.omit(_.omitBy(extractResearchParams(ctx), _.isNil), 'ownerID');
   const query = { id, ownerID: ctx.user.id };
 
   await Research.updateOne(query, { $set: fields });
@@ -103,5 +111,32 @@ router.delete('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContex
 
   sendResponse(ctx, 204);
 }));
+
+router.post('/:id/copy', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
+  const id = ctx.params.id;
+
+  const research = await Research.findOne({ id });
+  if (!research) {
+    return sendError(ctx, 404, { message: 'Research not found' });
+  }
+
+  const nextResearch = _.omit(research.toJSON(), ['_id', 'id', 'createdAt', 'updatedAt']);
+  const savedResearch = await (new Research(nextResearch).save());
+
+  const query = { researchID: research.id };
+  const fetchedExperiments = await Experiment.find(query, {_id: 0, id: 0, createdAt: 0, updatedAt: 0});
+
+  const experiments = _.map(fetchedExperiments, (experiment) => {
+    return {
+      ...experiment.toJSON(),
+      researchID: savedResearch.id,
+    };
+  });
+
+  const experimentResults = await Experiment.insertMany(experiments);
+  console.log('--- experimentResults ---', experimentResults.length);
+
+  sendResponse(ctx, 200, savedResearch);
+}))
 
 export default router;

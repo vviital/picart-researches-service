@@ -7,6 +7,7 @@ import {
   get,
   isEqual,
   isNil,
+  map,
   omit,
   omitBy,
   sortBy,
@@ -163,6 +164,13 @@ router.post('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) =>
   sendResponse(ctx, 201, result.toJSON({ virtuals: true }));
 }));
 
+router.get('/ids', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
+  const result = await Experiment.find({ ownerID: ctx.user.id }, { id: 1 });
+  const ids = map(result, 'id');
+
+  sendResponse(ctx, 200, {identifiers: ids});
+}));
+
 router.get('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const id = ctx.params.id;
   const experiment = await Experiment.findOne({ id, ownerID: ctx.user.id});
@@ -252,6 +260,28 @@ router.delete('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContex
   await Experiment.deleteOne({ id, ownerID: ctx.user.id });
 
   sendResponse(ctx, 204);
+}));
+
+router.get('/:id/results', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
+  const id = ctx.params.id;
+
+  const experiment = await Experiment.findOne({ id }, {results: 1, researchID: 1});
+  if (!experiment) {
+    return sendError(ctx, 404, { message: 'Experiment not found' });
+  }
+
+  const formattedResults = map(experiment.results, (result) => {
+    return ({
+      element: result.element.element,
+      peakWaveLength: result.peak.peak.x,
+      peakIntensity: result.peak.peak.y,
+      elementWaveLength: result.element.waveLength,
+      elementIntensity: result.element.intensity,
+      researchID: experiment.researchID,
+    });
+  });
+
+  sendResponse(ctx, 200, formattedResults);
 }));
 
 export default router;

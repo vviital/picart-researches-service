@@ -43,6 +43,9 @@ const researchDefinition = new mongoose.Schema({
   files: {
     type: [fileDefinition]
   },
+  comparisonID: {
+    type: String
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -57,6 +60,7 @@ researchDefinition.virtual('type').get(() => 'research');
 researchDefinition.index({ ownerID: 1 });
 researchDefinition.index({ ownerID: 1, createdAt: -1 });
 researchDefinition.index({ ownerID: 1, updatedAt: -1 });
+researchDefinition.index({ ownerID: 1, createdAt: -1, name: 1, researchType: 1, id: 1, type: 1 });
 
 export interface IResearch extends mongoose.Document {
   id: string
@@ -77,7 +81,8 @@ export interface IResearch extends mongoose.Document {
 const Researches = mongoose.model<IResearch>('researches', researchDefinition);
 
 export const Types = {
-  zaidel: 'zaidel'
+  zaidel: 'zaidel',
+  comparison: 'comparison',
 };
 
 export default Researches;

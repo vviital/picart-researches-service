@@ -78,6 +78,10 @@ export type ZaidelFindChemicalElementsResponse = {
   autoSuggestions: ZaidelAutoSuggestion[]
 }
 
+export type ComparisonRequest = {
+  id: string
+}
+
 const requestOptions = {
   json: true,
 }
@@ -115,6 +119,16 @@ class Zaidel {
     });
 
     return res;
+  }
+
+  async triggerComparison(data: ComparisonRequest, auth: string) {
+    await request.post(`${config.zaidelServiceURL}/comparison`, {
+      ...requestOptions,
+      body: data,
+      headers: {
+        Authorization: auth
+      }
+    });
   }
 }
 

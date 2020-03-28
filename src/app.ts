@@ -5,13 +5,14 @@ import * as logger from 'koa-logger';
 import * as cors from '@koa/cors';
 
 import config from './config';
-import { experiments, researches, service } from './routes';
+import { comparisons, experiments, researches, service } from './routes';
 
 const createApp = async () => {
   const app = new Koa();
   app.use(cors());
   app.use(logger());
 
+  app.use(comparisons.routes());
   app.use(experiments.routes());
   app.use(researches.routes());
   app.use(service.routes());
