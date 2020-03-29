@@ -22,22 +22,11 @@ const comparisonResultDefinition = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  finishedAt: {
+    type: Date,
+  },
   similarities: {
-    type: [new mongoose.Schema({
-      percentage: {
-        type: Number,
-        default: 0,
-        required: true,
-      },
-      researchID: {
-        type: String,
-        required: true,
-      },
-      experimentID: {
-        type: String,
-        required: true
-      }
-    },  { _id : false })],
+    type: [Object],
     default: []
   },
   researchID: {
@@ -81,12 +70,15 @@ export interface IComparison extends mongoose.Document {
   total: Number
   processed: Number
   similarities: {
-    percentage: number
-    researchID: string
-    experimentID: string
+    p: number
+    eID: string
+    eName: string
+    rID: string
+    rName: string
   }[]
   createdAt: Date
   updatedAt: Date
+  finishedAt: Date
 }
 
 const Comparisons = mongoose.model<IComparison>('comparisons', comparisonResultDefinition);

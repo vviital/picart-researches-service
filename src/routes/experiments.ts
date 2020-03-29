@@ -18,6 +18,7 @@ import {
 import { sendResponse, sendError } from '../senders';
 import { auth } from '../middlewares';
 import Experiment from '../datasource/experiments.mongo';
+import Research from '../datasource/researches.mongo';
 import zaidel, { PeakWithElements, ZaidelAutoSuggestion, ElementWithPeak } from '../datasource/zaidel.service';
 
 import {PersonalizedContext} from '../models';
@@ -165,7 +166,7 @@ router.post('/', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) =>
 }));
 
 router.get('/ids', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
-  const result = await Experiment.find({ ownerID: ctx.user.id }, { id: 1 });
+  const result = await Experiment.find({ ownerID: ctx.user.id }, { _id: 0, id: 1 });
   const ids = map(result, 'id');
 
   sendResponse(ctx, 200, {identifiers: ids});
@@ -265,19 +266,26 @@ router.delete('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContex
 router.get('/:id/results', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
   const id = ctx.params.id;
 
-  const experiment = await Experiment.findOne({ id }, {results: 1, researchID: 1});
+  const experiment = await Experiment.findOne({ id }, {experimentResults: 1, researchID: 1, name: 1});
   if (!experiment) {
     return sendError(ctx, 404, { message: 'Experiment not found' });
   }
 
-  const formattedResults = map(experiment.results, (result) => {
+  const research = await Research.findOne({ id: experiment.researchID }, { name: 1 });
+  if (!research) {
+    return sendError(ctx, 404, { message: 'Research not found' });
+  }
+
+  const formattedResults = map(experiment.experimentResults, (result) => {
     return ({
       element: result.element.element,
-      peakWaveLength: result.peak.peak.x,
-      peakIntensity: result.peak.peak.y,
-      elementWaveLength: result.element.waveLength,
       elementIntensity: result.element.intensity,
+      elementWaveLength: result.element.waveLength,
+      experimentName: experiment.name,
+      peakIntensity: result.peak.peak.y,
+      peakWaveLength: result.peak.peak.x,
       researchID: experiment.researchID,
+      researchName: research.name,
     });
   });
 

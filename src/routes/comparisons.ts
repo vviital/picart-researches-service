@@ -34,7 +34,7 @@ const getComparison = async (query: object, auth: string): Promise<IComparison|n
   if (!comparison.lockedAt || moment().isAfter(moment(comparison.lockedAt).add(1, 'day'))) {
     comparison.lockedAt = new Date();
     await comparison.save();
-    await zaidel.triggerComparison({ id: comparison.id }, auth);
+    await zaidel.triggerComparison({ id: comparison.id }, auth).catch(console.error);
   }
 
   return comparison;
@@ -71,7 +71,7 @@ router.get('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) 
   const comparison = await getComparison({ id, ownerID: ctx.user.id}, auth);
 
   if (!comparison) {
-    return sendError(ctx, 404, { message: 'Experiment not found' });
+    return sendError(ctx, 404, { message: 'Comparison not found' });
   }
 
   sendResponse(ctx, 200, comparison.toJSON({ virtuals: true }));
@@ -83,6 +83,63 @@ router.delete('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContex
   await Comparison.deleteOne({ id, ownerID: ctx.user.id });
 
   sendResponse(ctx, 204);
+}));
+
+const extractActualizationParams = (ctx: PersonalizedContext) => ({
+  total: +ctx.request.body.total,
+  processed: +ctx.request.body.processed,
+});
+
+router.patch('/:id/actualization', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
+  const id = ctx.params.id;
+  const params = extractActualizationParams(ctx);
+  console.log('--- params ---', params);
+
+  const comparison = await Comparison.findOne({ id, ownerID: ctx.user.id });
+  if (!comparison) {
+    return sendError(ctx, 404, { message: 'Comparison not found' });
+  }
+
+  if (comparison.finished) {
+    return sendError(ctx, 400, { message: 'Forbidden to change finished comparison' });
+  }
+
+  comparison.total = params.total;
+  comparison.processed = params.processed;
+  
+  await comparison.save();
+
+  sendResponse(ctx, 201);
+}));
+
+const extractFinalizationParams = (ctx: PersonalizedContext) => ({
+  ...extractActualizationParams(ctx),
+  similarities: ctx.request.body.similarities,
+});
+
+router.patch('/:id/finalization', auth, toPersonalizedHandler(async (ctx: PersonalizedContext) => {
+  const id = ctx.params.id;
+  const params = extractFinalizationParams(ctx);
+  console.log('--- params ---', params);
+
+  const comparison = await Comparison.findOne({ id, ownerID: ctx.user.id });
+  if (!comparison) {
+    return sendError(ctx, 404, { message: 'Comparison not found' });
+  }
+
+  if (comparison.finished) {
+    return sendError(ctx, 400, { message: 'Forbidden to change finished comparison' });
+  }
+
+  comparison.total = params.total;
+  comparison.processed = params.processed;
+  comparison.finished = true;
+  comparison.similarities = params.similarities;
+  comparison.finishedAt = new Date();
+  
+  await comparison.save();
+
+  sendResponse(ctx, 201);
 }));
 
 export default router;

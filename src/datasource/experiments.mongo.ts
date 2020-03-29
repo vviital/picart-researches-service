@@ -247,7 +247,7 @@ export interface IExperiment extends mongoose.Document {
   peaks: Peak[]
   peaksSearchSettings: ZaidelPeaksSettings
   researchID: string
-  results: ElementWithPeak[]
+  experimentResults: ElementWithPeak[]
   type: string
   createdAt: Date
   updatedAt: Date

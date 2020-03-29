@@ -7,6 +7,7 @@ import { sendResponse, sendError } from '../senders';
 import { auth } from '../middlewares';
 import Research, {Types} from '../datasource/researches.mongo';
 import Experiment from '../datasource/experiments.mongo';
+import Comparison from '../datasource/comparisons.mongo';
 import {PersonalizedContext} from '../models';
 
 const defaultProjection = { _id: 0 };
@@ -109,6 +110,12 @@ router.delete('/:id', auth, toPersonalizedHandler(async (ctx: PersonalizedContex
 
   await Research.deleteOne({ id, ownerID: ctx.user.id });
 
+  const deletedExperiments = await Experiment.deleteMany({ researchID: id, ownerID: ctx.user.id });
+  console.log('Deleted experiments: ', deletedExperiments);
+
+  const deletedComparisons = await Comparison.deleteMany({ researchID: id, ownerID: ctx.user.id });
+  console.log('Deleted comparisons: ', deletedComparisons);
+
   sendResponse(ctx, 204);
 }));
 
@@ -134,7 +141,6 @@ router.post('/:id/copy', auth, toPersonalizedHandler(async (ctx: PersonalizedCon
   });
 
   const experimentResults = await Experiment.insertMany(experiments);
-  console.log('--- experimentResults ---', experimentResults.length);
 
   sendResponse(ctx, 200, savedResearch);
 }))
