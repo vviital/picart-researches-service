@@ -9,7 +9,6 @@ import { sendError } from '../senders';
 const getUserClaims = (claims: any): UserClaims => ({
   id: get(claims, 'id', ''),
   email: get(claims, 'email', ''),
-  login: get(claims, 'login', ''),
   roles: get(claims, 'roles', []),
 });
 
